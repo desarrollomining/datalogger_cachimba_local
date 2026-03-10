@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+import sys
+sys.path.append('/srv/datalogger_cachimba/')
+from time import time, sleep
+from database.models import Database
+from datetime import datetime, timedelta
+import argparse
+from tabulate import tabulate
+
+ap = argparse.ArgumentParser()
+ap.add_argument('estado', nargs='?', default=None, type=str, help="Ingrese el turno que desea consultar 0/nada para el actual, -1 para el anterior, positivo para cuantos")
+args = ap.parse_args()
+prev=args.estado
+
+if prev==None:
+        ahora =datetime.now()
+        if ahora.hour < 8:
+            ahora_date = datetime(ahora.year,ahora.month,ahora.day,20,0,0)-timedelta(days=1)
+        elif ahora.hour >=20:
+            ahora_date = datetime(ahora.year,ahora.month,ahora.day,20,0,0)
+        else:
+            ahora_date = datetime(ahora.year,ahora.month,ahora.day,8,0,0)
+
+        database = Database()
+
+        #DATA DE VOLUMEN
+        rows, cols = database.get_flow_data_date(ahora_date.timestamp(), (ahora_date+timedelta(hours=12)).timestamp())
+        data_vol = list(rows[0])
+        volumen_m3 = data_vol[1]-data_vol[0]
+
+        #CARGAS GENERALES
+        rows, cols = database.get_state_button_data_turno(ahora_date.timestamp(), (ahora_date+timedelta(hours=12)).timestamp())
+        data_cargas = list(rows[0])
+        cargas_agua = data_cargas[0]
+        cargas_surfactante = data_cargas[1]
+
+        #CARGAS REG-01
+        rows, cols = database.get_state_button_data_turno(ahora_date.timestamp(), (ahora_date+timedelta(hours=12)).timestamp(), reg='REG-01')
+        data_cargas = list(rows[0])
+        reg_1_agua = data_cargas[0]
+        reg_1_surf = data_cargas[1]
+
+        #CARGAS REG-02
+        rows, cols = database.get_state_button_data_turno(ahora_date.timestamp(), (ahora_date+timedelta(hours=12)).timestamp(), reg='REG-02')
+        data_cargas = list(rows[0])
+        reg_2_agua = data_cargas[0]
+        reg_2_surf = data_cargas[1]
+
+        #CARGAS REG-03
+        rows, cols = database.get_state_button_data_turno(ahora_date.timestamp(), (ahora_date+timedelta(hours=12)).timestamp(), reg='REG-03')
+        data_cargas = list(rows[0])
+        reg_3_agua = data_cargas[0]
+        reg_3_surf = data_cargas[1]
+
+        print('Data Obtenida del Turno Actual: ')
+        print(f'VOLUMEN CONSUMIDO M3:           {volumen_m3}')
+        print(f'CARGAS DE AGUA TOTALES:         {cargas_agua}')
+        print(f'CARGAS DE SURFACTANTE TOTALES:  {cargas_surfactante}')
+        print(f'CARGAS AGUA REG-01:             {reg_1_agua}')
+        print(f'CARGAS SURFACTANTE REG-01:      {reg_1_surf}')
+        print(f'CARGAS AGUA REG-02:             {reg_2_agua}')
+        print(f'CARGAS SURFACTANTE REG-02:      {reg_2_surf}')
+        print(f'CARGAS AGUA REG-03:             {reg_3_agua}')
+        print(f'CARGAS SURFACTANTE REG-03:      {reg_3_surf}')
+        print(f'CARGAS AGUA LOCAL:              {cargas_agua-reg_1_agua-reg_2_agua-reg_3_agua}')
+        print(f'CARGAS SURFACTANTE LOCAL:       {cargas_surfactante-reg_1_surf-reg_2_surf-reg_3_surf}')
+
+
+else:
+        try:
+                if int(prev)>0:
+                        database = Database()
+                        rows, col_name = database.get_turno_data(limit=int(prev))
+                        print(tabulate(rows, headers=col_name, tablefmt='psql'))
+                else:
+                        database = Database()
+                        rows, cols = database.get_turno_data(limit=int(prev))
+                        list_rows = list(rows[0])
+
+                        print('Data Obtenida del Turno Actual: ')
+                        print(f'VOLUMEN CONSUMIDO M3:           {list_rows[2]}')
+                        print(f'CARGAS DE AGUA TOTALES:         {list_rows[3]}')
+                        print(f'CARGAS DE SURFACTANTE TOTALES:  {list_rows[4]}')
+                        print(f'CARGAS AGUA REG-01:             {list_rows[5]}')
+                        print(f'CARGAS SURFACTANTE REG-01:      {list_rows[6]}')
+                        print(f'CARGAS AGUA REG-02:             {list_rows[7]}')
+                        print(f'CARGAS SURFACTANTE REG-02:      {list_rows[8]}')
+                        print(f'CARGAS AGUA REG-03:             {list_rows[9]}')
+                        print(f'CARGAS SURFACTANTE REG-03:      {list_rows[10]}')
+                        print(f'CARGAS AGUA LOCAL:              {list_rows[3]-list_rows[5]-list_rows[7]-list_rows[9]}')
+                        print(f'CARGAS SURFACTANTE LOCAL:       {list_rows[4]-list_rows[6]-list_rows[8]-list_rows[10]}')
+
+        except:
+                print("No hay datos guardados del turno seleccionado")

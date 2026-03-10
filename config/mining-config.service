@@ -1,0 +1,16 @@
+[Unit]
+Description=cachimba Autoupdate Config Service
+ConditionPathExists=|/usr/bin
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/bin/python3 /srv/datalogger_cachimba/config
+
+# Restart every hour
+Restart=always
+RestartSec=3600s
+
+
+[Install]
+WantedBy=multi-user.target
