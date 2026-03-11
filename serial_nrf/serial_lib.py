@@ -19,15 +19,16 @@ class SerialLib(Utils):
         This function attempts to establish a serial connection with the specified USB device node.
 
         """
-
         try:
             self.log(f"Try to connect serial port: {self.port}")
             self.serial_module = Serial(self.port, self.baudrate, timeout=self.timeout)
-            self.read()
+
+            threading.Thread(target=self.read, daemon=True).start()
+            threading.Thread(target=self.write, daemon=True).start()
 
         except Exception as Ex:
             self.log(Ex)
-
+            
     def read(self) -> None:
         """
         This function continuously reads lines from the serial module and processes them.
@@ -94,7 +95,7 @@ class SerialLib(Utils):
                                 changes = 1
 
 
-                    elif any(k in data for k in ["cargar_agua", "cargar_sulf", "detener"]):
+                    if any(k in data for k in ["cargar_agua", "cargar_sulf", "detener"]):
                         self.log(f"GOT COMMAND: {data}")
                         try:
                             regador = data.get("machine", "LOCAL")
@@ -151,23 +152,25 @@ class SerialLib(Utils):
                 self.log(Ex)
                 
     def write(self) -> None:
-        try:
-            if self.serial_module and self.serial_module.is_open:
+        while True:
+            try:
+                if self.serial_module and self.serial_module.is_open:
 
-                msg = {
-                    "timestamp": int(time())
-                }
+                    msg = {
+                        "timestamp": int(time())
+                    }
 
-                data = json.dumps(msg)
-                self.serial_module.write((data + "\n").encode())
+                    data = json.dumps(msg)
+                    self.serial_module.write((data + "\n").encode())
 
-                self.log(f"SENT: {data}")
+                    self.log(f"SENT: {data}")
 
-            else:
-                self.log("Serial port not connected")
+                else:
+                    self.log("Serial port not connected")
 
-        except Exception as Ex:
-            self.log(f"Write error: {Ex}")
+            except Exception as Ex:
+                self.log(f"Write error: {Ex}")
+            sleep(1)
 
     def puerto(self, port):
         if "tty" in str(port):
