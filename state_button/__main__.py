@@ -14,8 +14,8 @@ class StateButton(Utils):
         self.read_state()
     
     def read_state(self):
-        try:
-            while True:
+        while True:
+            try:
                 f = open('/button_state_live.json')
                 data = json.load(f)
                 if data != self.last_button_state:
@@ -23,8 +23,8 @@ class StateButton(Utils):
                     self.last_button_state = data
                 sleep(0.5)
         
-        except Exception as ex:
-            print(ex)
+            except Exception as ex:
+                print(ex)
 
 
 if __name__ == "__main__":
